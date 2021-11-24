@@ -1,0 +1,35 @@
+- task: PowerShell@2
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  displayName: 'Comment PR'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $PullRequestId = $env:SYSTEM_PULLREQUEST_PULLREQUESTID
+      $RepositoryId = $env:BUILD_REPOSITORY_ID
+      $ProjectName = $env:SYSTEM_TEAMPROJECT
+      $OrganizationUri = $env:SYSTEM_COLLECTIONURI
+      $BuildId = $env:BUILD_BUILDID
+      $SystemAccessToken = $env:SYSTEM_ACCESSTOKEN
+      $Comment = "Your`n **super** comment"
+      $newThreadEndpoint = "$( $OrganizationUri )/$( $Project )/_apis/git/repositories/$( $RepositoryId )/pullRequests/$( $PullRequestId )/threads?api-version=6.0"
+
+      $header = @{
+        Authorization = "Bearer $SystemAccessToken"
+      }
+
+      $newThread = @{
+        Comments = @(
+            @{
+                ParentCommentId = 0
+                Content         = $Comment
+                CommentType     = "text"
+            }
+        )
+        Status = "Active"
+      } 
+
+      $newThreadBody = $newThread | ConvertTo-Json -Depth 10
+
+      Invoke-RestMethod -Uri $newThreadEndpoint -Headers $header -Method Post -Body $newThreadBody -ContentType 'application/json'    
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
